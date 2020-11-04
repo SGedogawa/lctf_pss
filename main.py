@@ -1,4 +1,4 @@
-from make_hyper_spectrum_cube import make_hyper_spectrum_cube as pss
+from psslib import make_hyper_spectrum_cube as pss
 
 
 if __name__ == "__main__":
