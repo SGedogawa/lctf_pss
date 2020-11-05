@@ -4,6 +4,7 @@ from settings import settings
 
 import cv2
 import numpy as np
+# from nptyping import NDArray
 import pandas as pd
 
 
@@ -21,6 +22,7 @@ class SpectrumCube(object):
                 "max:{}\n".format(np.max(spectrum_cube)),
                 "min:{}\n".format(np.min(spectrum_cube)),
                 "shape:{}\n".format(spectrum_cube.shape),
+                "composition:{}\n".format(self.comp),
                 "=" * 25 + "\n",
                 "=" * 25 + "\n",
                 )
@@ -33,6 +35,7 @@ class SpectrumCube(object):
                   "max:{}\n".format(np.max(spectrum_cube)),
                   "min:{}\n".format(np.min(spectrum_cube)),
                   "shape:{}\n".format(spectrum_cube.shape),
+                  "composition:{}\n".format(self.comp),
                   "=" * 25 + "\n",
                   )
             self.spectrum_cube = spectrum_cube.astype(np.uint8)

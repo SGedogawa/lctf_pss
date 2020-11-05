@@ -1,5 +1,5 @@
-from settings import settings
 from psslib import make_spectrum_cube as sc
+from settings import settings
 
 import cv2
 import numpy as np
@@ -8,25 +8,51 @@ import numpy as np
 class MakeHyperSpectrumCube(object):
 
     def __init__(self, spectrum_cube):
-        spectrum_cube = sc.SpectrumCube(spectrum_cube, show=False)
-        hyper_spectrum_cube = np.empty([settings.hyper_img_height, settings.hyper_img_width, len(settings.wavelength)],
-                                       dtype=np.uint8)
+        self.spectrum_cube = sc.SpectrumCube(spectrum_cube, show=False)
+        self.material = self.spectrum_cube.material
 
-        for i in range(len(settings.wavelength)):
-            gray_img = spectrum_cube.show_gray_image(num=i, show=False)
-            img = gray_img[50: 450, 150: 650]
-            hyper_spectrum_cube[:, :, i] = img
+    def reshape(self,
+                hyper_img_height=settings.hyper_img_height,
+                hyper_img_width=settings.hyper_img_width,
+                hyper_img_depth=len(settings.wavelength),
+                hyper_img_height_start=settings.hyper_img_height_start,
+                hyper_img_width_start=settings.hyper_img_width_start,
+                show=True):
+
+        reshape_spectrum_cube = np.empty([hyper_img_height, hyper_img_width, hyper_img_depth], dtype=np.uint8)
+
+        for i in range(hyper_img_depth):
+            gray_img = self.spectrum_cube.show_gray_image(num=i, show=False)
+            img = gray_img[
+                  hyper_img_height_start: hyper_img_height_start+hyper_img_height,
+                  hyper_img_width_start: hyper_img_width_start+hyper_img_width
+                  ]
+            reshape_spectrum_cube[:, :, i] = img
+
         '''
             mask = spectrum_cube.show_bin_image(num=i, threshold=220, show=False)
             dst = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
             hyper_spectrum_cube[:, :, i] = dst
         '''
+        if show is True:
+            print(
+                "=" * 25 + "\n",
+                "=" * 25 + "\n",
+                "material:{}\n".format(self.material),
+                "max:{}\n".format(np.max(reshape_spectrum_cube)),
+                "min:{}\n".format(np.min(reshape_spectrum_cube)),
+                "shape:{}\n".format(reshape_spectrum_cube.shape),
+                "=" * 25 + "\n",
+                "=" * 25 + "\n",
+            )
+        return reshape_spectrum_cube
 
-        self.hyper_spectrum_cube = hyper_spectrum_cube
 
-    def akaze_matching(self, first=10, second=11):
-        first_img = self.hyper_spectrum_cube[:, :, first]
-        second_img = self.hyper_spectrum_cube[:, :, second]
+class Tool(object):
+
+    def akaze_matching(self, spectrum_cube, first=10, second=11):
+        first_img = spectrum_cube[:, :, first]
+        second_img = spectrum_cube[:, :, second]
 
         # A-KAZE検出器の生成
         akaze = cv2.AKAZE_create()
@@ -42,14 +68,19 @@ class MakeHyperSpectrumCube(object):
         matches = bf.knnMatch(des1, des2, k=2)
 
         # データを間引きする
-        ratio = 2.0
+        ratio = 0.8
         good = []
         for m, n in matches:
             if m.distance < ratio * n.distance:
                 good.append([m])
 
+        # 上位何個の点をマッチングに使うか(もし20個なかったら全て使う)
+        point_num = 20
+        if len(good) < point_num:
+            point_num = len(good)
+
         # 対応する特徴点同士を描画
-        akaze_matching_img = cv2.drawMatchesKnn(first_img, kp1, second_img, kp2, good, None, flags=2)
+        akaze_matching_img = cv2.drawMatchesKnn(first_img, kp1, second_img, kp2, good[:point_num], None, flags=0)
         self.show_image(image=akaze_matching_img, name="_{}_and_{}_akaze_matching_image".format(first, second))
 
     def show_image(self, image, name="image"):
